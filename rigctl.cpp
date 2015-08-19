@@ -28,20 +28,18 @@
 #include <cstdio>
 
 #include "rigctl.h"
+#include "rigctl.moc"
 #include <string>
 #include <vector>
-#include <QtDebug>
 
-RigCtlSocket::RigCtlSocket(QObject *parent, UI *main, QTcpSocket *conn)
-        : QObject(parent),
-          main(main) {
-        this->conn = conn;
+RigCtlSocket::RigCtlSocket(QObject *parent, QTcpSocket *conn)
+        : QObject(parent) {
+	this->conn = conn;
 }
 
 void RigCtlSocket::disconnected() {
         deleteLater();
 }
-
 
 void RigCtlSocket::readyRead() {
         if (!conn->canReadLine()) {
@@ -78,38 +76,22 @@ void RigCtlSocket::readyRead() {
 
         int space = command.indexOf(' ');
         if (command[0] == 'f') { // get_freq
-            out << main->rigctlGetFreq() << "\n";
-            output = true;
+            //out << main->rigctlGetFreq() << "\n";
+            //output = true;
         } else if(cmdlist[0].compare("F") == 0 && cmdlistcnt == 2) { // set_freq
             QString newf = cmdlist[1];
-#if QT_VERSION >= 0x050000
-            main->rigctlSetFreq(atol(newf.toUtf8()));
-#else
-            main->rigctlSetFreq(atol(newf.toAscii()));
-#endif
+            //main->rigctlSetFreq(atol(newf.toUtf8()));
         } else if (command[0] == 'm') { // get_mode
-#if QT_VERSION >= 0x050000
-            out << main->rigctlGetMode().toUtf8() << "\n";
-            out << main->rigctlGetFilter().toUtf8() << "\n";
-#else
-            out << main->rigctlGetMode().toAscii() << "\n";
-            out << main->rigctlGetFilter().toAscii() << "\n";
-#endif
-            output = true;
+            //output = true;
         } else if (command[0] == 'v') { // get_vfo
-#if QT_VERSION >= 0x050000
-            out << main->rigctlGetVFO().toUtf8() << "\n";
-#else
-            out << main->rigctlGetVFO().toAscii() << "\n";
-#endif
-            output = true;
+            //output = true;
         } else if (command[0] == 'V') { // set_VFO
             QString cmd = command.constData();
             if ( cmd.contains("VFOA")){
-               main->rigctlSetVFOA();
+               //main->rigctlSetVFOA();
             }
             if ( cmd.contains("VFOB")){
-               main->rigctlSetVFOB();
+               //main->rigctlSetVFOB();
             }
         } else if (command[0] == 'j') { // get_rit
             out << "0" << "\n";
@@ -124,16 +106,7 @@ void RigCtlSocket::readyRead() {
             // if split is to be supported then this needs to be the
             // Tx VFO and other split functions will probably need to
             // be implemented
-#if QT_VERSION >= 0x050000
-            out << main->rigctlGetVFO().toUtf8() << "\n";
-#else
-            out << main->rigctlGetVFO().toAscii() << "\n";
-#endif
             output = true;
-        } else if (command[0] == 'T') { // set_ptt  no tx yet but this keeps grig and fldigi happy
-            int enabled = command.mid(space + 1).toInt();
-            qDebug("Rigctl: PTT T : ->%d", enabled);
-            }
 	} else if (command == "\\dump_state" || command[0] == '1') {
             // See dump_state in rigctl_parse.c for what this means.
             out << "0\n"; // protocol version
@@ -171,9 +144,8 @@ void RigCtlSocket::readyRead() {
 
 const unsigned short RigCtlServer::RIGCTL_PORT(19090);
 
-RigCtlServer::RigCtlServer(QObject *parent, UI *main,  unsigned short rigctl_port)
-        : QObject(parent),
-          main(main) {
+RigCtlServer::RigCtlServer(QObject *parent,  unsigned short rigctl_port)
+        : QObject(parent) {
         server = new QTcpServer(this);
         if (!server->listen(QHostAddress::Any, rigctl_port)) {
                 fprintf(stderr, "rigctl: failed to bind socket on port %d\n", rigctl_port);
@@ -185,9 +157,11 @@ RigCtlServer::RigCtlServer(QObject *parent, UI *main,  unsigned short rigctl_por
 
 void RigCtlServer::newConnection() {
         QTcpSocket *conn = server->nextPendingConnection();
-        RigCtlSocket *sock = new RigCtlSocket(this, main, conn);
+        RigCtlSocket *sock = new RigCtlSocket(this, conn);
         connect(conn, SIGNAL(disconnected()), conn, SLOT(deleteLater()));
         connect(conn, SIGNAL(disconnected()), sock, SLOT(disconnected()));
         connect(conn, SIGNAL(readyRead()), sock, SLOT(readyRead()));
 }
+
+int main(void) {return 0;}
 

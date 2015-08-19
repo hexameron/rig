@@ -5,21 +5,18 @@
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 
-class UI;
-
 class RigCtlSocket : public QObject {
         Q_OBJECT
 
         public:
-                RigCtlSocket(QObject *parent = 0, UI *main = 0,
-                             QTcpSocket *conn = 0);
+                RigCtlSocket(QObject *parent = 0, QTcpSocket *conn = 0);
+		~RigCtlSocket(){};
 
         public slots:
                 void disconnected(void);
                 void readyRead(void);
 
         private:
-                UI *main;
                 QTcpSocket *conn;
 };
 
@@ -27,14 +24,14 @@ class RigCtlServer : public QObject {
         Q_OBJECT
 
         public:
-                RigCtlServer(QObject *parent = 0, UI *main = 0, unsigned short rigctl_port = RIGCTL_PORT);
+                RigCtlServer(QObject *parent = 0, unsigned short rigctl_port = RIGCTL_PORT);
+		~RigCtlServer(){};
                 static const unsigned short RIGCTL_PORT;
 
         public slots:
                 void newConnection(void);
 
         private:
-                UI *main;
                 QTcpServer *server;
 };
 #endif // RIGCTL_H
