@@ -5,11 +5,22 @@
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 
+class RigCtl {
+	public:
+		RigCtl(){};
+		~RigCtl(){};
+		double getFreq();
+		double setFreq(double freq);
+
+	private:
+		double m_freq;
+};
+
 class RigCtlSocket : public QObject {
         Q_OBJECT
 
         public:
-                RigCtlSocket(QObject *parent = 0, QTcpSocket *conn = 0);
+                RigCtlSocket(QObject *parent = 0, RigCtl *rig = 0, QTcpSocket *conn = 0);
 		~RigCtlSocket(){};
 
         public slots:
@@ -18,6 +29,7 @@ class RigCtlSocket : public QObject {
 
         private:
                 QTcpSocket *conn;
+		RigCtl *m_rig;
 };
 
 class RigCtlServer : public QObject {
@@ -26,6 +38,7 @@ class RigCtlServer : public QObject {
         public:
                 RigCtlServer(QObject *parent = 0, unsigned short rigctl_port = RIGCTL_PORT);
 		~RigCtlServer(){};
+		RigCtl* getRig();
                 static const unsigned short RIGCTL_PORT;
 
         public slots:
@@ -33,5 +46,6 @@ class RigCtlServer : public QObject {
 
         private:
                 QTcpServer *server;
+		RigCtl *m_rig;
 };
 #endif // RIGCTL_H

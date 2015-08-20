@@ -26,15 +26,17 @@
  *
  */
 #include <cstdio>
+#include <unistd.h>
 
 #include "rigctl.h"
 #include "rigctl.moc"
 #include <string>
 #include <vector>
 
-RigCtlSocket::RigCtlSocket(QObject *parent, QTcpSocket *conn)
+RigCtlSocket::RigCtlSocket(QObject *parent, RigCtl *rig, QTcpSocket *conn)
         : QObject(parent) {
 	this->conn = conn;
+	this->m_rig = rig;
 }
 
 void RigCtlSocket::disconnected() {
@@ -76,11 +78,11 @@ void RigCtlSocket::readyRead() {
 
         int space = command.indexOf(' ');
         if (command[0] == 'f') { // get_freq
-            //out << main->rigctlGetFreq() << "\n";
-            //output = true;
+            out << m_rig->getFreq() << "\n";
+            output = true;
         } else if(cmdlist[0].compare("F") == 0 && cmdlistcnt == 2) { // set_freq
             QString newf = cmdlist[1];
-            //main->rigctlSetFreq(atol(newf.toUtf8()));
+            m_rig->setFreq(atol(newf.toUtf8()));
         } else if (command[0] == 'm') { // get_mode
             //output = true;
         } else if (command[0] == 'v') { // get_vfo
@@ -136,7 +138,7 @@ void RigCtlSocket::readyRead() {
             fprintf(stderr, "rigctl: unknown command \"%s\"\n", command.constData());
             retcode = -11;
         }
-        //fprintf(stderr, "rigctl:  command \"%s\"\n", command.constData());
+        fprintf(stderr, "rigctl:  command \"%s\"\n", command.constData());
         if (!output) {
                 out << "RPRT " << retcode << "\n";
         }
@@ -144,8 +146,22 @@ void RigCtlSocket::readyRead() {
 
 const unsigned short RigCtlServer::RIGCTL_PORT(19090);
 
+double RigCtl::getFreq() {
+	return m_freq;
+}
+
+double RigCtl::setFreq(double freq) {
+	m_freq = freq;
+	return m_freq;
+}
+
+RigCtl* RigCtlServer::getRig() {
+	return m_rig;
+}
+
 RigCtlServer::RigCtlServer(QObject *parent,  unsigned short rigctl_port)
         : QObject(parent) {
+	m_rig = new RigCtl();
         server = new QTcpServer(this);
         if (!server->listen(QHostAddress::Any, rigctl_port)) {
                 fprintf(stderr, "rigctl: failed to bind socket on port %d\n", rigctl_port);
@@ -157,11 +173,24 @@ RigCtlServer::RigCtlServer(QObject *parent,  unsigned short rigctl_port)
 
 void RigCtlServer::newConnection() {
         QTcpSocket *conn = server->nextPendingConnection();
-        RigCtlSocket *sock = new RigCtlSocket(this, conn);
+        RigCtlSocket *sock = new RigCtlSocket(this, m_rig, conn);
         connect(conn, SIGNAL(disconnected()), conn, SLOT(deleteLater()));
         connect(conn, SIGNAL(disconnected()), sock, SLOT(disconnected()));
         connect(conn, SIGNAL(readyRead()), sock, SLOT(readyRead()));
 }
 
-int main(void) {return 0;}
+int main(void) {
+	RigCtl *rig;
+	RigCtlServer *server;
+
+	server = new RigCtlServer(0, 19997);
+	rig = server->getRig();
+	rig->setFreq(434.5e6);
+
+	while (true) {
+		sleep(5);
+		printf ("Rig Freq: %fMHz\n", 1e-6*rig->getFreq());
+	}
+	return 0;
+}
 
