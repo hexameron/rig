@@ -82,8 +82,6 @@ void RigCtlSocket::readyRead() {
         } else if(cmdlist[0].compare("F") == 0 && cmdlistcnt == 2) { // set_freq
             QString newf = cmdlist[1];
             m_rig->setFreq(atol(newf.toUtf8()));
-        } else if (command[0] == 'm') { // get_mode
-            //output = true;
         } else if (command[0] == 'v') { // get_vfo
             //output = true;
         } else if (command[0] == 'V') { // set_VFO
@@ -97,6 +95,18 @@ void RigCtlSocket::readyRead() {
         } else if (command[0] == 'j') { // get_rit
             out << "0" << "\n";
             output = true;
+	} else if (cmdlist[0][0] == 'M') { // Set_mode
+	    if (cmdlist[1][0]=='U')
+		m_rig->setMode(0);
+	    if (cmdlist[1][0]=='F')
+		m_rig->setMode(1);
+	} else if (command[0] == 'm') { // get_mode
+	    if (m_rig->getMode())
+		out << "FM\n";
+	    else
+		out << "USB\n";
+	    out << "3300\n";
+	    output = true;
         } else if (command[0] == 's') { // get_split_vfo
             // simple "we don't do split" response
 
@@ -148,10 +158,15 @@ const unsigned short RigCtlServer::RIGCTL_PORT(19999);
 double RigCtl::getFreq() {
 	return m_freq;
 }
-
-double RigCtl::setFreq(double freq) {
+void RigCtl::setFreq(double freq) {
 	m_freq = freq;
-	return m_freq;
+}
+
+int RigCtl::getMode() {
+	return m_mode;
+}
+void RigCtl::setMode(int mode) {
+	m_mode = mode;
 }
 
 RigCtl* RigCtlServer::getRig() {
@@ -186,23 +201,20 @@ int main(int argc, char *argv[])
 	QObject *object;
 	RigCtl *rig;
 	RigCtlServer *server;
-	double lastfreq;
 
 	object = new QObject();
 	server = new RigCtlServer(object, 19997);
 	rig = server->getRig();
 	rig->setFreq(434.5e6);
-	lastfreq = 0;
-
+	rig->setMode(0);
+#if 1
+	app.exec();
+#else
 	while (true) {
-		usleep(1e5);
+		usleep(50e3);
 		app.processEvents();
-		double newfreq = rig->getFreq();
-		if (newfreq != lastfreq) {
-			printf ("Rig Freq: %fMHz\n", newfreq * 1.0e-6);
-			lastfreq = newfreq;
-		}
 	}
+#endif
 	return 0;
 }
 

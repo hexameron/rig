@@ -10,10 +10,13 @@ class RigCtl {
 		RigCtl(){};
 		~RigCtl(){};
 		double getFreq();
-		double setFreq(double freq);
+		void setFreq(double freq);
+		int getMode();
+		void setMode(int);
 
 	private:
 		double m_freq;
+		int m_mode;
 };
 
 class RigCtlSocket : public QObject {
