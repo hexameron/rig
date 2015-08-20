@@ -76,7 +76,6 @@ void RigCtlSocket::readyRead() {
              F 1.234     set_freq -fixed
          */
 
-        int space = command.indexOf(' ');
         if (command[0] == 'f') { // get_freq
             out << m_rig->getFreq() << "\n";
             output = true;
@@ -109,11 +108,11 @@ void RigCtlSocket::readyRead() {
             // Tx VFO and other split functions will probably need to
             // be implemented
             output = true;
-	} else if (command == "\\dump_state" || command[0] == '1') {
+	} else if (command[0] == '\\' || command[0] == '1') {
             // See dump_state in rigctl_parse.c for what this means.
             out << "0\n"; // protocol version
             out << "2" << "\n"; //RIG_MODEL_NETRIGCTL
-            out << "2" << "\n"; //RIG_ITU_REGION2
+            out << "1" << "\n"; //RIG_ITU_REGION1
             // Not sure exactly what to send here but this seems to work
             out << "150000.000000 30000000.000000  0x900af -1 -1 0x10000003 0x3\n"; //("%"FREQFMT" %"FREQFMT" 0x%x %d %d 0x%x 0x%x\n",start,end,modes,low_power,high_power,vfo,ant)
             out << "0 0 0 0 0 0 0\n";
@@ -135,16 +134,16 @@ void RigCtlSocket::readyRead() {
             out << "0\n";
             output = true;
         } else {
-            fprintf(stderr, "rigctl: unknown command \"%s\"\n", command.constData());
+        //  fprintf(stderr, "rigctl: unknown command \"%s\"\n", command.constData());
             retcode = -11;
         }
-        fprintf(stderr, "rigctl:  command \"%s\"\n", command.constData());
+        // fprintf(stderr, "rigctl:  command \"%s\"\n", command.constData());
         if (!output) {
                 out << "RPRT " << retcode << "\n";
         }
 }
 
-const unsigned short RigCtlServer::RIGCTL_PORT(19090);
+const unsigned short RigCtlServer::RIGCTL_PORT(19999);
 
 double RigCtl::getFreq() {
 	return m_freq;
@@ -172,24 +171,37 @@ RigCtlServer::RigCtlServer(QObject *parent,  unsigned short rigctl_port)
 }
 
 void RigCtlServer::newConnection() {
-        QTcpSocket *conn = server->nextPendingConnection();
+	printf ("Rig Connected.\n");
+	QTcpSocket *conn = server->nextPendingConnection();
         RigCtlSocket *sock = new RigCtlSocket(this, m_rig, conn);
         connect(conn, SIGNAL(disconnected()), conn, SLOT(deleteLater()));
         connect(conn, SIGNAL(disconnected()), sock, SLOT(disconnected()));
         connect(conn, SIGNAL(readyRead()), sock, SLOT(readyRead()));
 }
 
-int main(void) {
+#include "QtCore/qcoreapplication.h"
+int main(int argc, char *argv[])
+{
+	QCoreApplication app(argc, argv);
+	QObject *object;
 	RigCtl *rig;
 	RigCtlServer *server;
+	double lastfreq;
 
-	server = new RigCtlServer(0, 19997);
+	object = new QObject();
+	server = new RigCtlServer(object, 19997);
 	rig = server->getRig();
 	rig->setFreq(434.5e6);
+	lastfreq = 0;
 
 	while (true) {
-		sleep(5);
-		printf ("Rig Freq: %fMHz\n", 1e-6*rig->getFreq());
+		usleep(1e5);
+		app.processEvents();
+		double newfreq = rig->getFreq();
+		if (newfreq != lastfreq) {
+			printf ("Rig Freq: %fMHz\n", newfreq * 1.0e-6);
+			lastfreq = newfreq;
+		}
 	}
 	return 0;
 }
