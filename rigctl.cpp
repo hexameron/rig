@@ -77,13 +77,14 @@ void RigCtlSocket::readyRead() {
          */
 
         if (command[0] == 'f') { // get_freq
-            out << m_rig->getFreq() << "\n";
+            out << QString::number(m_rig->getFreq(),'e', 8) << "\n";
             output = true;
         } else if(cmdlist[0].compare("F") == 0 && cmdlistcnt == 2) { // set_freq
             QString newf = cmdlist[1];
-            m_rig->setFreq(atol(newf.toUtf8()));
+            m_rig->setFreq(atof(newf.toUtf8()));
         } else if (command[0] == 'v') { // get_vfo
-            //output = true;
+            out  << "VFOA\n";
+	    output = true;
         } else if (command[0] == 'V') { // set_VFO
             QString cmd = command.constData();
             if ( cmd.contains("VFOA")){
